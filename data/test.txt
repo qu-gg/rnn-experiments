@@ -1,0 +1,142 @@
+The initial version of the LSTM block [14, 15] included
+(possibly multiple) cells, input and output gates, but no forget
+gate and no peephole connections. The output gate, unit
+biases, or input activation function were omitted for certain
+experiments. Training was done using a mixture of Real Time
+Recurrent Learning (RTRL) [23, 24] and Backpropagation
+Through Time (BPTT) [24, 25]. Only the gradient of the cell
+was propagated back through time, and the gradient for the
+other recurrent connections was truncated. Thus, that study
+did not use the exact gradient for training. Another feature of
+that version was the use of full gate recurrence, which means
+that all the gates received recurrent inputs from all gates at the
+previous time-step in addition to the recurrent inputs from the
+block outputs. This feature did not appear in any of the later
+papers.
+A. Forget Gate
+The first paper to suggest a modification of the LSTM
+architecture introduced the forget gate [21], enabling the LSTM
+to reset its own state. This allowed learning of continual tasks
+such as embedded Reber grammar.
+B. Peephole Connections
+Gers and Schmidhuber [22] argued that in order to learn
+precise timings, the cell needs to control the gates. So far
+this was only possible through an open output gate. Peephole
+connections (connections from the cell to the gates, blue
+in Figure 1) were added to the architecture in order to
+make precise timings easier to learn. Additionally, the output
+activation function was omitted, as there was no evidence that
+it was essential for solving the problems that LSTM had been
+tested on so far.
+C. Full Gradient
+The final modification towards the vanilla LSTM was
+done by Graves and Schmidhuber [20]. This study presented
+the full backpropagation through time (BPTT) training for
+LSTM networks with the architecture described in Section II,
+and presented results on the TIMIT [26] benchmark. Using
+full BPTT had the added advantage that LSTM gradients
+could be checked using finite differences, making practical
+implementations more reliable.
+D. Other Variants
+Since its introduction the vanilla LSTM has been the most
+commonly used architecture, but other variants have been
+suggested too. Before the introduction of full BPTT training,
+Gers et al. [27] utilized a training method based on Extended
+Kalman Filtering which enabled the LSTM to be trained on
+some pathological cases at the cost of high computational
+complexity. Schmidhuber et al. [28] proposed using a hybrid
+evolution-based method instead of BPTT for training but
+retained the vanilla LSTM architecture.
+Bayer et al. [29] evolved different LSTM block architectures
+that maximize fitness on context-sensitive grammars. A larger
+study of this kind was later done by Jozefowicz et al. [30]. Sak
+et al. [9] introduced a linear projection layer that projects the
+output of the LSTM layer down before recurrent and forward
+connections in order to reduce the amount of parameters for
+LSTM networks with many blocks. By introducing a trainable
+scaling parameter for the slope of the gate activation functions,
+Doetsch et al. [5] were able to improve the performance of
+LSTM on an offline handwriting recognition dataset. In what
+they call Dynamic Cortex Memory, Otte et al. [31] improved
+convergence speed of LSTM by adding recurrent connections
+between the gates of a single block (but not between the
+blocks).
+Cho et al. [32] proposed a simplified variant of the LSTM
+architecture called Gated Recurrent Unit (GRU). They used
+neither peephole connections nor output activation functions,
+and coupled the input and the forget gate into an update gate.
+Finally, their output gate (called reset gate) only gates the
+recurrent connections to the block input (Wz). Chung et al.
+[33] performed an initial comparison between GRU and Vanilla
+LSTM and reported mixed results.
+IV. EVALUATION SETUP
+The focus of our study is to empirically compare different
+LSTM variants, and not to achieve state-of-the-art results.
+Therefore, our experiments are designed to keep the setup
+simple and the comparisons fair. The vanilla LSTM is used as
+a baseline and evaluated together with eight of its variants. Each
+variant adds, removes, or modifies the baseline in exactly one
+aspect, which allows to isolate their effect. They are evaluated
+on three different datasets from different domains to account
+for cross-domain variations.
+For fair comparison, the setup needs to be similar for
+each variant. Different variants might require different settings
+of hyperparameters to give good performance, and we are
+interested in the best performance that can be achieved
+with each variant. For this reason we chose to tune the
+hyperparameters like learning rate or amount of input noise
+individually for each variant. Since hyperparameter space is
+large and impossible to traverse completely, random search was
+used in order to obtain good-performing hyperparameters [18]
+for every combination of variant and dataset. Random search
+was also chosen for the added benefit of providing enough data
+for analyzing the general effect of various hyperparameters on
+the performance of each LSTM variant (Section V-B).
+A. Datasets
+Each dataset is split into three parts: a training set, a
+validation set used for early stopping and for optimizing the
+hyperparameters, and a test set for the final evaluation.
+TIMIT: The TIMIT Speech corpus [26] is large enough
+to be a reasonable acoustic modeling benchmark for speech
+recognition, yet it is small enough to keep a large study such
+as ours manageable. Our experiments focus on the frame-wise
+classification task for this dataset, where the objective is to
+classify each audio-frame as one of 61 phones.2 From the
+raw audio we extract 12 Mel Frequency Cepstrum Coefficients
+(MFCCs) [35] + energy over 25ms hamming-windows with
+stride of 10ms and a pre-emphasis coefficient of 0.97. This
+preprocessing is standard in speech recognition and was chosen
+in order to stay comparable with earlier LSTM-based results
+(e.g. [20, 36]). The 13 coefficients along with their first and
+second derivatives comprise the 39 inputs to the network and
+were normalized to have zero mean and unit variance.
+The performance is measured as classification error percentage. The training, testing, and validation sets are split in
+line with Halberstadt [37] into 3696, 400, and 192 sequences,
+having 304 frames on average.
+We restrict our study to the core test set, which is an
+established subset of the full TIMIT corpus, and use the
+splits into training, testing, and validation sets as detailed
+by Halberstadt [37]. In short, that means we only use the core
+test set and drop the SA samples3
+from the training set. The
+validation set is built from some of the discarded samples from
+the full test set.
+IAM Online: The IAM Online Handwriting Database [38]
+consists of English sentences as time series of pen movements
+that have to be mapped to characters. The IAM-OnDB dataset
+splits into one training set, two validation sets, and one test set,
+having 775, 192, 216, and 544 boards each. Each board, see
+Figure 2(a), contains multiple hand-written lines, which in turn
+consist of several strokes. We use one line per sequence, and
+A network with a single LSTM hidden layer and a sigmoid
+output layer was used for the JSB Chorales task. Bidirectional
+LSTM [20] was used for TIMIT and IAM Online tasks,
+consisting of two hidden layers, one processing the input
+forwards and the other one backwards in time, both connected
+to a single softmax output layer. As loss function we employed
+Cross-Entropy Error for TIMIT and JSB Chorales, while for
+the IAM Online task the Connectionist Temporal Classification
+(CTC) loss by Graves et al. [39] was used. The initial weights
+for all networks were drawn from a normal distribution with
+standard deviation of 0.1. Training was done using Stochastic
+Gradient Descent with Nesterov-style momentum [42] with
